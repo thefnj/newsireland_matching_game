@@ -6,7 +6,7 @@ import os
 st.set_page_config(layout="wide")
 
 # Get the path to the HTML file
-html_file_path = os.path.join(os.path.dirname(__file__), 'profile_match_game.html')
+html_file_path = os.path.join(os.path.dirname(__file__), 'index.html')
 
 # Open and read the HTML file
 try:
