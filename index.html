@@ -42,7 +42,7 @@
         .name-card {
             background-color: #2d3748; /* Tailwind gray-800 */
             border: 2px solid #4a5568; /* Tailwind gray-600 */
-            min-height: 200px;
+            min-height: 180px; /* Reduced height slightly as no avatar */
         }
 
         /* Style for the drop zone inside the name card */
@@ -148,10 +148,12 @@
         <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md text-center border-4 border-teal-300">
             <h2 class="font-retro text-3xl text-yellow-300 mb-4">Game Over!</h2>
             <p id="final-score-text" class="text-2xl mb-6">You scored 6 out of 8!</p>
-            <p class="text-lg text-gray-300 mb-8">Nice work matching the team!</p>
-            <button id="play-again-button" class="font-retro text-lg bg-teal-500 hover:bg-teal-400 text-gray-900 px-6 py-3 rounded-lg shadow-lg transition-transform transform hover:scale-105">
-                Play Again?
-            </button>
+            <p class="text-lg text-gray-300 mb-8">
+                Great job! Please take a screenshot of your score and send it to:
+                <br>
+                <span class="font-mono text-teal-300">thomas.fanning@newsireland.com</span>
+            </p>
+            <!-- "Play Again" button has been removed -->
         </div>
     </div>
 
@@ -159,15 +161,16 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             // --- 1. DATA ---
+            // Placeholder data. Replace with your real summaries and names.
             const GAME_DATA = [
-                { id: 1, name: "Alice Smith", profile: "Communicates with short, direct sentences. Favors bulleted lists and ends emails with a very formal sign-off.", avatarColor: "A78BFA", avatarText: "AS" },
-                { id: 2, name: "Bob Johnson", profile: "Loves using emojis in Slack. Keeps messages casual and frequently signs off with 'thx!!' or 'cheers'.", avatarColor: "FBBF24", avatarText: "BJ" },
-                { id: 3, name: "Charlie Lee", profile: "Asks a lot of questions. Prefers a collaborative call to resolve issues and often replies with 'Thoughts?'.", avatarColor: "34D399", avatarText: "CL" },
-                { id: 4, name: "Dana Chen", profile: "Very data-driven. Messages often include links to dashboards or charts and use phrases like 'As per the attached'.", avatarColor: "F87171", avatarText: "DC" },
-                { id: 5, name: "Eve Davis", profile: "A natural storyteller. Prefers to give full context in long, descriptive paragraphs and starts with 'To paint a picture...'", avatarColor: "60A5FA", avatarText: "ED" },
-                { id: 6, name: "Frank White", profile: "The team cheerleader. Always starts group messages with 'Hi team!' and uses positive, encouraging language.", avatarColor: "FB923C", avatarText: "FW" },
-                { id: 7, name: "Grace Kim", profile: "Prefers asynchronous communication. Writes detailed, numbered guides in emails to avoid unnecessary meetings.", avatarColor: "EC4899", avatarText: "GK" },
-                { id: 8, name: "Henry Wu", profile: "The visual thinker. Often responds with a quick screenshot, a screen recording, or a simple diagram.", avatarColor: "A8A29E", avatarText: "HW" }
+                { id: 1, name: "Thomas Fanning", profile: "Communicates with a proactive, informative, and expert tone, balancing professionalism with accessibility. Prefers concise paragraphs, extensive use of bold text, bulleted lists for scannability, UK English spelling, and a standard closing of 'All the best,'." },
+                { id: 2, name: "Bob Johnson", profile: "Loves using emojis in Slack. Keeps messages casual and frequently signs off with 'thx!!' or 'cheers'." },
+                { id: 3, name: "Charlie Lee", profile: "Asks a lot of questions. Prefers a collaborative call to resolve issues and often replies with 'Thoughts?'." },
+                { id: 4, name: "Dana Chen", profile: "Very data-driven. Messages often include links to dashboards or charts and use phrases like 'As per the attached'." },
+                { id: 5, name: "Eve Davis", profile: "A natural storyteller. Prefers to give full context in long, descriptive paragraphs and starts with 'To paint a picture...'" },
+                { id: 6, name: "Frank White", profile: "The team cheerleader. Always starts group messages with 'Hi team!' and uses positive, encouraging language." },
+                { id: 7, name: "Grace Kim", profile: "Prefers asynchronous communication. Writes detailed, numbered guides in emails to avoid unnecessary meetings." },
+                { id: 8, name: "Henry Wu", profile: "The visual thinker. Often responds with a quick screenshot, a screen recording, or a simple diagram." }
             ];
 
             // --- 2. DOM ELEMENTS ---
@@ -176,7 +179,6 @@
             const scoreDisplay = document.getElementById('score-display');
             const completionModal = document.getElementById('completion-modal');
             const finalScoreText = document.getElementById('final-score-text');
-            const playAgainButton = document.getElementById('play-again-button');
             const submitButton = document.getElementById('submit-button');
 
             // --- 3. GAME STATE ---
@@ -186,6 +188,10 @@
 
             // --- 4. HELPER FUNCTIONS ---
 
+            /**
+             * Shuffles an array in place using the Fisher-Yates algorithm.
+             * @param {Array} array - The array to shuffle.
+             */
             function shuffle(array) {
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -219,16 +225,9 @@
              */
             function createNameCard(item) {
                 const card = document.createElement('div');
-                card.className = 'name-card rounded-lg shadow-md p-4 flex flex-col items-center';
+                card.className = 'name-card rounded-lg shadow-md p-4 flex flex-col items-center justify-between';
                 card.dataset.id = item.id;
                 card.dataset.type = 'name';
-
-                // Avatar
-                const img = document.createElement('img');
-                img.src = `https://placehold.co/80x80/${item.avatarColor}/1a202c?text=${item.avatarText}&font=press-start-2p`;
-                img.alt = `${item.text} Avatar`;
-                img.className = 'rounded-full mb-4 border-2 border-gray-600';
-                card.appendChild(img);
                 
                 // Name
                 const text = document.createElement('p');
@@ -238,7 +237,8 @@
 
                 // Drop Zone
                 const dropZone = document.createElement('div');
-                dropZone.className = 'drop-zone w-full rounded-lg p-2 flex items-center justify-center';
+                // Added flex-grow so the drop zone fills the card
+                dropZone.className = 'drop-zone w-full rounded-lg p-2 flex items-center justify-center flex-grow';
                 dropZone.innerHTML = `<p class="text-sm text-gray-500">Drag Summary Here</p>`;
                 
                 // Add drop listeners
@@ -269,11 +269,10 @@
                 const profiles = GAME_DATA.map(item => ({ id: item.id, text: item.profile }));
                 const names = GAME_DATA.map(item => ({ 
                     id: item.id, 
-                    text: item.name, 
-                    avatarColor: item.avatarColor, 
-                    avatarText: item.avatarText 
+                    text: item.name
                 }));
  
+                // Shuffle both columns
                 shuffle(profiles);
                 shuffle(names);
 
@@ -418,7 +417,6 @@
             }
 
             // --- 7. EVENT LISTENERS ---
-            playAgainButton.addEventListener('click', initGame);
             submitButton.addEventListener('click', handleSubmit);
  
             // --- 8. START GAME ---
