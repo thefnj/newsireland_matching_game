@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Matching Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Press Start 2P (retro) and Inter (modern) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        /* Define the retro-modern theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Tailwind gray-900 */
+            color: #e2e8f0; /* Tailwind gray-200 */
+        }
+
+        /* Use the retro font for headers */
+        .font-retro {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* Custom card styles */
+        .game-card {
+            background-color: #2d3748; /* Tailwind gray-800 */
+            border: 2px solid #4a5568; /* Tailwind gray-600 */
+            transition: all 0.2s ease-in-out;
+            cursor: grab;
+        }
+        
+        /* Style for profile cards (draggable) */
+        .profile-card {
+            min-height: 100px;
+        }
+        
+        /* Style for name cards (drop targets) */
+        .name-card {
+            background-color: #2d3748; /* Tailwind gray-800 */
+            border: 2px solid #4a5568; /* Tailwind gray-600 */
+            min-height: 200px;
+        }
+
+        /* Style for the drop zone inside the name card */
+        .drop-zone {
+            min-height: 120px;
+            border: 2px dashed #4a5568; /* Tailwind gray-600 */
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Style for when dragging over a valid drop zone */
+        .drag-over {
+            background-color: #4a5568; /* Tailwind gray-600 */
+            border-color: #00F0FF; /* Bright cyan */
+        }
+        
+        /* Style for the card being dragged */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        /* State: Correct Match */
+        .game-card.correct {
+            background-color: #2f855a; /* Tailwind green-700 */
+            border-color: #68d391; /* Tailwind green-400 */
+            cursor: not-allowed;
+        }
+        
+        /* State: Incorrect Match */
+        .game-card.incorrect {
+            background-color: #c53030; /* Tailwind red-700 */
+            border-color: #f56565; /* Tailwind red-400 */
+            cursor: not-allowed;
+            animation: shake 0.5s;
+        }
+        
+        .name-card.correct { border-color: #68d391; }
+        .name-card.incorrect { border-color: #f56565; }
+
+        /* Shake animation for incorrect match */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Modal styling */
+        .modal {
+            background-color: rgba(26, 32, 44, 0.9);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="font-retro text-3xl md:text-5xl text-teal-300 mb-4">Profile Match-Up!</h1>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+                Drag a <span class="text-teal-300">Style Summary</span> and drop it onto the correct <span class="text-pink-400">Colleague</span>.
+            </p>
+        </header>
+
+        <!-- Score -->
+        <div class="font-retro text-2xl text-center mb-6">
+            SCORE: <span id="score-display" class="text-yellow-300">0</span>
+        </div>
+
+        <!-- Game Area -->
+        <main id="game-board" class="flex flex-col md:flex-row justify-center gap-6 md:gap-12">
+
+            <!-- Column 1: Profile Summaries (Holding Pen) -->
+            <!-- We make this wrapper sticky so the profile cards are always available when scrolling -->
+            <div class="flex-1 max-w-lg mx-auto md:mx-0 md:sticky md:top-8 md:self-start">
+                <h2 class="font-retro text-xl text-teal-300 mb-4 text-center">Style Summaries</h2>
+                <div id="profile-column" class="flex flex-col gap-4 p-4 bg-gray-900 rounded-lg min-h-[400px]">
+                    <!-- Profile cards will be injected by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Column 2: Colleague Names (Drop Zones) -->
+            <div class="flex-1 max-w-lg mx-auto md:mx-0">
+                <h2 class="font-retro text-xl text-pink-400 mb-4 text-center">Colleagues</h2>
+                <div id="name-column" class="flex flex-col gap-4">
+                    <!-- Name cards will be injected by JavaScript -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Submit Button -->
+        <div class="text-center mt-8">
+            <button id="submit-button" class="font-retro text-lg bg-gray-600 text-gray-900 px-6 py-3 rounded-lg shadow-lg transition-all" disabled>
+                Submit Answers
+            </button>
+        </div>
+    </div>
+
+    <!-- Completion Modal (Hidden by default) -->
+    <div id="completion-modal" class="fixed inset-0 z-50 modal flex-col items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md text-center border-4 border-teal-300">
+            <h2 class="font-retro text-3xl text-yellow-300 mb-4">Game Over!</h2>
+            <p id="final-score-text" class="text-2xl mb-6">You scored 6 out of 8!</p>
+            <p class="text-lg text-gray-300 mb-8">Nice work matching the team!</p>
+            <button id="play-again-button" class="font-retro text-lg bg-teal-500 hover:bg-teal-400 text-gray-900 px-6 py-3 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                Play Again?
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. DATA ---
+            const GAME_DATA = [
+                { id: 1, name: "Alice Smith", profile: "Communicates with short, direct sentences. Favors bulleted lists and ends emails with a very formal sign-off.", avatarColor: "A78BFA", avatarText: "AS" },
+                { id: 2, name: "Bob Johnson", profile: "Loves using emojis in Slack. Keeps messages casual and frequently signs off with 'thx!!' or 'cheers'.", avatarColor: "FBBF24", avatarText: "BJ" },
+                { id: 3, name: "Charlie Lee", profile: "Asks a lot of questions. Prefers a collaborative call to resolve issues and often replies with 'Thoughts?'.", avatarColor: "34D399", avatarText: "CL" },
+                { id: 4, name: "Dana Chen", profile: "Very data-driven. Messages often include links to dashboards or charts and use phrases like 'As per the attached'.", avatarColor: "F87171", avatarText: "DC" },
+                { id: 5, name: "Eve Davis", profile: "A natural storyteller. Prefers to give full context in long, descriptive paragraphs and starts with 'To paint a picture...'", avatarColor: "60A5FA", avatarText: "ED" },
+                { id: 6, name: "Frank White", profile: "The team cheerleader. Always starts group messages with 'Hi team!' and uses positive, encouraging language.", avatarColor: "FB923C", avatarText: "FW" },
+                { id: 7, name: "Grace Kim", profile: "Prefers asynchronous communication. Writes detailed, numbered guides in emails to avoid unnecessary meetings.", avatarColor: "EC4899", avatarText: "GK" },
+                { id: 8, name: "Henry Wu", profile: "The visual thinker. Often responds with a quick screenshot, a screen recording, or a simple diagram.", avatarColor: "A8A29E", avatarText: "HW" }
+            ];
+
+            // --- 2. DOM ELEMENTS ---
+            const profileColumn = document.getElementById('profile-column');
+            const nameColumn = document.getElementById('name-column');
+            const scoreDisplay = document.getElementById('score-display');
+            const completionModal = document.getElementById('completion-modal');
+            const finalScoreText = document.getElementById('final-score-text');
+            const playAgainButton = document.getElementById('play-again-button');
+            const submitButton = document.getElementById('submit-button');
+
+            // --- 3. GAME STATE ---
+            let score = 0;
+            const totalMatches = GAME_DATA.length;
+            let isChecking = false;
+
+            // --- 4. HELPER FUNCTIONS ---
+
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            /**
+             * Creates a draggable profile card.
+             */
+            function createProfileCard(item) {
+                const card = document.createElement('div');
+                card.className = 'game-card profile-card rounded-lg shadow-md p-4 flex items-center justify-center text-center';
+                card.dataset.id = item.id;
+                card.dataset.type = 'profile';
+                card.draggable = true;
+
+                const text = document.createElement('p');
+                text.className = 'text-base text-gray-200';
+                text.textContent = item.text;
+                card.appendChild(text);
+
+                // Add drag listeners
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                return card;
+            }
+
+            /**
+             * Creates a name card with a drop zone.
+             */
+            function createNameCard(item) {
+                const card = document.createElement('div');
+                card.className = 'name-card rounded-lg shadow-md p-4 flex flex-col items-center';
+                card.dataset.id = item.id;
+                card.dataset.type = 'name';
+
+                // Avatar
+                const img = document.createElement('img');
+                img.src = `https://placehold.co/80x80/${item.avatarColor}/1a202c?text=${item.avatarText}&font=press-start-2p`;
+                img.alt = `${item.text} Avatar`;
+                img.className = 'rounded-full mb-4 border-2 border-gray-600';
+                card.appendChild(img);
+                
+                // Name
+                const text = document.createElement('p');
+                text.className = 'font-retro text-lg text-pink-300 mb-4';
+                text.textContent = item.text;
+                card.appendChild(text);
+
+                // Drop Zone
+                const dropZone = document.createElement('div');
+                dropZone.className = 'drop-zone w-full rounded-lg p-2 flex items-center justify-center';
+                dropZone.innerHTML = `<p class="text-sm text-gray-500">Drag Summary Here</p>`;
+                
+                // Add drop listeners
+                dropZone.addEventListener('dragover', handleDragOver);
+                dropZone.addEventListener('dragleave', handleDragLeave);
+                dropZone.addEventListener('drop', handleDrop);
+                
+                card.appendChild(dropZone);
+                return card;
+            }
+
+            // --- 5. GAME LOGIC ---
+
+            function initGame() {
+                score = 0;
+                isChecking = false;
+                scoreDisplay.textContent = '0';
+                profileColumn.innerHTML = '';
+                nameColumn.innerHTML = '';
+                completionModal.classList.add('hidden');
+                updateSubmitButtonState(); // Will disable it
+
+                // Make the profile column a drop zone for "returning" cards
+                profileColumn.addEventListener('dragover', handleDragOver);
+                profileColumn.addEventListener('dragleave', handleDragLeave);
+                profileColumn.addEventListener('drop', handleDrop);
+
+                const profiles = GAME_DATA.map(item => ({ id: item.id, text: item.profile }));
+                const names = GAME_DATA.map(item => ({ 
+                    id: item.id, 
+                    text: item.name, 
+                    avatarColor: item.avatarColor, 
+                    avatarText: item.avatarText 
+                }));
+ 
+                shuffle(profiles);
+                shuffle(names);
+
+                profiles.forEach(profile => {
+                    profileColumn.appendChild(createProfileCard(profile));
+                });
+
+                names.forEach(name => {
+                    nameColumn.appendChild(createNameCard(name));
+                });
+            }
+
+            // --- 6. DRAG & DROP HANDLERS ---
+
+            function handleDragStart(e) {
+                if (isChecking) return;
+                e.dataTransfer.setData('profileId', e.target.dataset.id);
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+
+            function handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+
+            function handleDragOver(e) {
+                if (isChecking) return;
+                e.preventDefault(); // Necessary to allow dropping
+                
+                let dropTarget = e.currentTarget;
+                if (dropTarget.id !== 'profile-column' && !dropTarget.classList.contains('drop-zone')) {
+                    dropTarget = dropTarget.querySelector('.drop-zone');
+                }
+                
+                dropTarget.classList.add('drag-over');
+            }
+
+            function handleDragLeave(e) {
+                let dropTarget = e.currentTarget;
+                if (dropTarget.id !== 'profile-column' && !dropTarget.classList.contains('drop-zone')) {
+                    dropTarget = dropTarget.querySelector('.drop-zone');
+                }
+                dropTarget.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                if (isChecking) return;
+                e.preventDefault();
+                
+                const profileId = e.dataTransfer.getData('profileId');
+                const profileCard = document.querySelector(`.game-card[data-id="${profileId}"][data-type="profile"]`);
+                const dropTarget = e.currentTarget; // This is either profileColumn or a .drop-zone
+                
+                dropTarget.classList.remove('drag-over');
+
+                // If dropping on a .drop-zone (inside a name card)
+                if (dropTarget.classList.contains('drop-zone')) {
+                    // If the zone already has a card, send it back to the profile column
+                    const existingCard = dropTarget.querySelector('.game-card');
+                    if (existingCard) {
+                        profileColumn.appendChild(existingCard);
+                    }
+                    
+                    // Add the new card and remove placeholder text
+                    dropTarget.innerHTML = '';
+                    dropTarget.appendChild(profileCard);
+                }
+                
+                // If dropping back on the main profile-column
+                if (dropTarget.id === 'profile-column') {
+                    // Check if the drop target's child (a drop-zone) had the card
+                    const originalParent = profileCard.parentElement;
+                    if (originalParent.classList.contains('drop-zone')) {
+                        originalParent.innerHTML = `<p class="text-sm text-gray-500">Drag Summary Here</p>`;
+                    }
+                    dropTarget.appendChild(profileCard);
+                }
+
+                updateSubmitButtonState();
+            }
+
+            /**
+             * Checks/updates the disabled state of the submit button.
+             */
+            function updateSubmitButtonState() {
+                // Count how many profile cards are *not* in the profile column
+                const matchedCardsCount = document.querySelectorAll('#name-column .profile-card').length;
+
+                if (matchedCardsCount === totalMatches) {
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('bg-gray-600', 'text-gray-900');
+                    submitButton.classList.add('bg-yellow-300', 'text-gray-900', 'hover:bg-yellow-200');
+                } else {
+                    submitButton.disabled = true;
+                    submitButton.classList.add('bg-gray-600', 'text-gray-900');
+                    submitButton.classList.remove('bg-yellow-300', 'text-gray-900', 'hover:bg-yellow-200');
+                }
+            }
+
+            /**
+             * Calculates score, shows feedback, and displays the modal.
+             */
+            function handleSubmit() {
+                isChecking = true; // Prevents further clicks
+                score = 0;
+                
+                const nameCards = document.querySelectorAll('.name-card');
+
+                nameCards.forEach(nameCard => {
+                    const nameId = nameCard.dataset.id;
+                    const profileCard = nameCard.querySelector('.profile-card');
+
+                    if (profileCard) {
+                        const profileId = profileCard.dataset.id;
+
+                        if (profileId === nameId) {
+                            score++;
+                            nameCard.classList.add('correct');
+                            profileCard.classList.add('correct');
+                        } else {
+                            nameCard.classList.add('incorrect');
+                            profileCard.classList.add('incorrect');
+                        }
+                        
+                        // Disable dragging
+                        profileCard.draggable = false;
+                    }
+                });
+
+                // Update score display and show modal
+                scoreDisplay.textContent = score;
+                submitButton.disabled = true;
+                setTimeout(() => showCompletionScreen(score), 800);
+            }
+ 
+            /**
+             * Displays the final completion modal.
+             */
+            function showCompletionScreen(finalScore) {
+                finalScoreText.textContent = `You scored ${finalScore} out of ${totalMatches}!`;
+                completionModal.classList.remove('hidden');
+                completionModal.classList.add('flex');
+            }
+
+            // --- 7. EVENT LISTENERS ---
+            playAgainButton.addEventListener('click', initGame);
+            submitButton.addEventListener('click', handleSubmit);
+ 
+            // --- 8. START GAME ---
+            initGame();
+
+        });
+    </script>
+</body>
+</html>
